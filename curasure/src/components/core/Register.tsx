@@ -22,18 +22,19 @@ function Register() {
     const duoState = new URLSearchParams(window.location.search).get("state");
 
     if (duoCode && duoState) {
-      // Step 1: Verify Duo authentication with back
       const verifyDuo = async () => {
         try {
           const res = await fetch(`${API_URL}/api/auth/duo/callback?duo_code=${duoCode}&state=${duoState}`, {
             method: "GET",
-            credentials: "include",
+            credentials: "include",  // Ensure credentials are included
           });
-          const data = await res.json();
 
+          const data = await res.json();
+          
           if (res.ok && data.token) {
-            // Step 2: Store the token in localStorage
+            // Step 1: Store the token in localStorage
             localStorage.setItem('token', data.token);
+
             setMessage("Duo Authentication Successful! Redirecting to login...");
             setTimeout(() => {
               navigate("/curasure/login");
@@ -51,7 +52,7 @@ function Register() {
 
       verifyDuo();
     }
-  }, [navigate]);  // Dependency on navigate so it runs when the component mounts
+  }, [navigate]);
 
   const handleRegister = async (e: any) => {
     e.preventDefault();
@@ -62,11 +63,11 @@ function Register() {
     try {
       // Step 1: Initiate Duo + backend pre-check
       const res = await fetch(`${API_URL}/api/auth/register`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        credentials: 'include',  // Ensure credentials are included
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, name, role, theme }),
-      });
+      });      
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Registration failed");
