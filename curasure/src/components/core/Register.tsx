@@ -41,70 +41,39 @@ function Register() {
         if (popup && popup.closed) {
           clearInterval(interval);
 
-          // Step 3: Create user role-specific profile
-          if (role === "doctor") {
-            const hospitalResponse = await fetch(`${API_URL}/api/hospitals`);
-            const hospitals = await hospitalResponse.json();
-            const hospital = hospitals.find((h: any) => h.name === "City General Hospital");
-            if (!hospital) throw new Error("Hospital not found");
+          // Step 3: After Duo Authentication, check if Duo verification is successful
+          const duoCode = new URLSearchParams(window.location.search).get("duo_code");
+          const duoState = new URLSearchParams(window.location.search).get("state");
 
-            const doctorResponse = await fetch(`${API_URL}/api/doctor`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                name,
-                email,
-                specialization: "General",
-                hospital: hospital._id,
-                rating: 0,
-                experience: 0,
-                profilePicture: "",
-                available: true,
-                covidCare: false,
-              }),
-            });
+          if (duoCode && duoState) {
+            try {
+              // Step 4: Verify Duo authentication with backend
+              const verifyDuoResponse = await fetch(`${API_URL}/api/auth/duo/callback?duo_code=${duoCode}&state=${duoState}`, {
+                method: "GET",
+                credentials: "include",
+              });
+              const verifyDuoData = await verifyDuoResponse.json();
 
-            if (!doctorResponse.ok) {
-              const doctorData = await doctorResponse.json();
-              throw new Error(doctorData.message || "Error saving doctor profile");
+              if (verifyDuoResponse.ok && verifyDuoData.token) {
+                // Save the token in localStorage and navigate to the login page
+                localStorage.setItem('token', verifyDuoData.token);
+                setMessage("Duo Authentication Successful! Redirecting to login...");
+                setTimeout(() => {
+                  navigate("/curasure/login");
+                }, 1500);
+              } else {
+                alert("Duo verification failed. Please try again.");
+                navigate("/curasure/login");
+              }
+            } catch (err) {
+              console.error('Duo verification error:', err);
+              alert('An error occurred during Duo verification. Please try again.');
+              navigate("/curasure/login");
             }
-          } else if (role === "patient") {
-            const patientResponse = await fetch(`${API_URL}/api/patient`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                name,
-                age: 0,
-                gender: "",
-                contact: "",
-                address: "",
-              }),
-            });
-
-            if (!patientResponse.ok) {
-              const patientData = await patientResponse.json();
-              throw new Error(patientData.message || "Error saving patient profile");
-            }
-          } else if (role === "insurance_provider") {
-            const providerResponse = await fetch(`${API_URL}/api/insurance-provider/insurance`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                name,
-                email,
-                password,
-                companyName: "CuraSure Insurance Co.",
-              }),
-            });
-
-            if (!providerResponse.ok) {
-              const providerData = await providerResponse.json();
-              throw new Error(providerData.message || "Error creating insurance provider profile");
-            }
+          } else {
+            alert("Missing Duo code or state. Please try again.");
+            navigate("/curasure/login");
           }
-
-          setMessage("Registration successful! Redirecting to login...");
-          setTimeout(() => navigate("/curasure/login"), 1500);
         }
       }, 500);
     } catch (err: any) {
@@ -117,11 +86,7 @@ function Register() {
 
   return (
     <>
-      <div
-        className="header"
-        style={{ cursor: "pointer" }}
-        onClick={() => navigate("/curasure/")}
-      >
+      <div className="header" style={{ cursor: "pointer" }} onClick={() => navigate("/curasure/")}>
         CuraSure
       </div>
       <div className="register-container">
@@ -159,9 +124,7 @@ function Register() {
             </div>
             <div className="input-group">
               <select value={role} onChange={(e) => setRole(e.target.value)} required>
-                <option value="" disabled hidden>
-                  Select a role
-                </option>
+                <option value="" disabled hidden>Select a role</option>
                 <option value="patient">Patient</option>
                 <option value="doctor">Doctor</option>
                 <option value="insurance_provider">Insurance Provider</option>
@@ -169,9 +132,7 @@ function Register() {
             </div>
             <div className="input-group">
               <select value={theme} onChange={(e) => setTheme(e.target.value)} required>
-                <option value="" disabled hidden>
-                  Select a theme
-                </option>
+                <option value="" disabled hidden>Select a theme</option>
                 <option value="default">Default</option>
                 <option value="dark">Dark</option>
                 <option value="light">Light</option>
@@ -182,9 +143,7 @@ function Register() {
             </button>
             <p className="signinText">
               Already Have An Account?{" "}
-              <a href="/curasure/login" className="signinLink">
-                Login
-              </a>
+              <a href="/curasure/login" className="signinLink">Login</a>
             </p>
           </form>
         </div>
