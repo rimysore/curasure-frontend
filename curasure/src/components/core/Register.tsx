@@ -22,7 +22,7 @@ function Register() {
     const duoState = new URLSearchParams(window.location.search).get("state");
 
     if (duoCode && duoState) {
-      // Step 1: Verify Duo authentication with backend
+      // Step 1: Verify Duo authentication with back
       const verifyDuo = async () => {
         try {
           const res = await fetch(`${API_URL}/api/auth/duo/callback?duo_code=${duoCode}&state=${duoState}`, {

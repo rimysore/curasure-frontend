@@ -17,7 +17,7 @@ FROM nginx:stable-alpine
 # Copy built frontend files from build stage
 COPY --from=build /app/dist /usr/share/nginx/html/curasure
  
-# Copy nginx.conf from root
+# Copy nginx.conf from roo
 COPY nginx.conf /etc/nginx/conf.d/default.conf
  
 EXPOSE 80
