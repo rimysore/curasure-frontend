@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Register.css";
 
-const API_URL = import.meta.env.VITE_API_URL;  // Accessing VITE_API_URL from .env
+const API_URL = import.meta.env.VITE_API_URL; // Accessing VITE_API_URL from .env
 
 function Register() {
   const [email, setEmail] = useState("");
@@ -16,44 +16,6 @@ function Register() {
 
   const navigate = useNavigate();
 
-  // useEffect to handle Duo callback after the popup is closed
-  useEffect(() => {
-    const duoCode = new URLSearchParams(window.location.search).get("duo_code");
-    const duoState = new URLSearchParams(window.location.search).get("state");
-
-    if (duoCode && duoState) {
-      const verifyDuo = async () => {
-        try {
-          const res = await fetch(`${API_URL}/api/auth/duo/callback?duo_code=${duoCode}&state=${duoState}`, {
-            method: "GET",
-            credentials: "include",  // Ensure credentials are included
-          });
-
-          const data = await res.json();
-          
-          if (res.ok && data.token) {
-            // Step 1: Store the token in localStorage
-            localStorage.setItem('token', data.token);
-
-            setMessage("Duo Authentication Successful! Redirecting to login...");
-            setTimeout(() => {
-              navigate("/curasure/login");
-            }, 1500);
-          } else {
-            alert("Duo verification failed. Please try again.");
-            navigate("/curasure/login");
-          }
-        } catch (err) {
-          console.error('Duo verification error:', err);
-          alert('An error occurred during Duo verification. Please try again.');
-          navigate("/curasure/login");
-        }
-      };
-
-      verifyDuo();
-    }
-  }, [navigate]);
-
   const handleRegister = async (e: any) => {
     e.preventDefault();
     setError("");
@@ -61,25 +23,22 @@ function Register() {
     setLoading(true);
 
     try {
-      // Step 1: Initiate Duo + backend pre-check
+      // Step 1: Send registration data to backend
       const res = await fetch(`${API_URL}/api/auth/register`, {
         method: 'POST',
-        credentials: 'include',  // Ensure credentials are included
+        credentials: 'include', // Ensure credentials are included
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, name, role, theme }),
-      });      
+      });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Registration failed");
 
-      // Step 2: Open Duo in popup
-      const popup = window.open(data.duoAuthUrl, "duoPopup", "width=500,height=700");
-
-      const interval = setInterval(async () => {
-        if (popup && popup.closed) {
-          clearInterval(interval);
-        }
-      }, 500);
+      // Step 2: If registration is successful, redirect to login
+      setMessage("Registration successful! Redirecting to login...");
+      setTimeout(() => {
+        navigate("/login");
+      }, 1500);
     } catch (err: any) {
       console.error("Registration error:", err);
       setError(err.message || "Registration failed");

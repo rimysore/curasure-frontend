@@ -29,78 +29,6 @@ function LoginPage() {
     fetchSiteKey();
   }, []);
 
-  useEffect(() => {
-    const handleMessage = async (event: MessageEvent) => {
-      console.log("📩 Received postMessage:", event.data);
-  
-      if (event.origin !== "http://localhost:5002") {
-        console.warn("⚠️ Rejected message from unexpected origin:", event.origin);
-        return;
-      }
-  
-      if (event.data?.duoLoginSuccess) {
-        const user = event.data.user;
-        const token = event.data.token;
-  
-        localStorage.setItem("authToken", token);
-        localStorage.setItem("userData", JSON.stringify(user));
-  
-        try {
-          if (user.role === "doctor") {
-            console.log("👨‍⚕️ Redirecting to doctor dashboard...");
-            const res = await fetch(`http://localhost:5002/api/doctors/search?name=${user.name}`);
-            const doctors = await res.json();
-            if (res.ok && doctors.length > 0) {
-              console.log("🔁 Navigating to:", `/doctor-dashboard/${doctors[0]._id}`);
-              navigate(`/doctor-dashboard/${doctors[0]._id}`);
-            } else {
-              throw new Error("Doctor profile not found");
-            }
-          } else if (user.role === "patient") {
-            console.log("🧑‍⚕️ Redirecting to patient dashboard...");
-            const res = await fetch(`http://localhost:5002/api/patients/search?name=${user.name}`);
-            const patients = await res.json();
-            if (res.ok && patients.length > 0) {
-              console.log("🔁 Navigating to:", `/patient-dashboard/${patients[0]._id}`);
-              navigate(`/patient-dashboard/${patients[0]._id}`);
-            } else {
-              throw new Error("Patient profile not found");
-            }
-          } else if (user.role === "insurance_provider") {
-            console.log("💼 Redirecting to insurance dashboard...");
-            const res = await fetch(`http://localhost:5002/api/insurance-provider/search?name=${user.name}`);
-            const providers = await res.json();
-            if (res.ok && providers.length > 0) {
-              const provider = providers[0];
-              const completeProvider = {
-                ...user,
-                companyName: provider.companyName,
-                _id: provider._id,
-              };
-              localStorage.setItem("userData", JSON.stringify(completeProvider));
-              console.log("🔁 Navigating to:", `/insurance-dashboard/${provider._id}`);
-              navigate(`/insurance-dashboard/${provider._id}`);
-            } else {
-              throw new Error("Insurance provider profile not found");
-            }
-          } else {
-            console.log("🔁 Navigating to home");
-            navigate("/");
-          }
-  
-          setSuccess(true);
-        } catch (err: any) {
-          console.error("❌ Post-login error:", err.message);
-          setError(err.message || "Login succeeded, but profile lookup failed.");
-        }
-      }
-    };
-  
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, [navigate]);
-  
-
   const handleCaptchaChange = (token: any) => {
     setCaptchaToken(token);
   };
@@ -128,9 +56,26 @@ function LoginPage() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Login failed");
 
-      const popup = window.open(data.duoAuthUrl, "duoLogin", "width=500,height=700");
-      if (!popup) throw new Error("Failed to open Duo popup. Please allow popups.");
+      // Assuming successful login returns a JWT token and user data
+      const token = data.token;
+      const user = data.user;
 
+      // Store the token and user data in localStorage
+      localStorage.setItem("authToken", token);
+      localStorage.setItem("userData", JSON.stringify(user));
+
+      // Redirect to the appropriate dashboard based on user role
+      if (user.role === "doctor") {
+        navigate(`/doctor-dashboard/${user._id}`);
+      } else if (user.role === "patient") {
+        navigate(`/patient-dashboard/${user._id}`);
+      } else if (user.role === "insurance_provider") {
+        navigate(`/insurance-dashboard/${user._id}`);
+      } else {
+        navigate("/");
+      }
+
+      setSuccess(true);
     } catch (err: any) {
       setError(err.message || "Something went wrong.");
       console.error("🚨 Login error:", err);
