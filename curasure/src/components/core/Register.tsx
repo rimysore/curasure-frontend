@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Register.css";
 
@@ -15,6 +15,43 @@ function Register() {
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
+
+  // useEffect to handle Duo callback after the popup is closed
+  useEffect(() => {
+    const duoCode = new URLSearchParams(window.location.search).get("duo_code");
+    const duoState = new URLSearchParams(window.location.search).get("state");
+
+    if (duoCode && duoState) {
+      // Step 1: Verify Duo authentication with backend
+      const verifyDuo = async () => {
+        try {
+          const res = await fetch(`${API_URL}/api/auth/duo/callback?duo_code=${duoCode}&state=${duoState}`, {
+            method: "GET",
+            credentials: "include",
+          });
+          const data = await res.json();
+
+          if (res.ok && data.token) {
+            // Step 2: Store the token in localStorage
+            localStorage.setItem('token', data.token);
+            setMessage("Duo Authentication Successful! Redirecting to login...");
+            setTimeout(() => {
+              navigate("/curasure/login");
+            }, 1500);
+          } else {
+            alert("Duo verification failed. Please try again.");
+            navigate("/curasure/login");
+          }
+        } catch (err) {
+          console.error('Duo verification error:', err);
+          alert('An error occurred during Duo verification. Please try again.');
+          navigate("/curasure/login");
+        }
+      };
+
+      verifyDuo();
+    }
+  }, [navigate]);  // Dependency on navigate so it runs when the component mounts
 
   const handleRegister = async (e: any) => {
     e.preventDefault();
@@ -40,40 +77,6 @@ function Register() {
       const interval = setInterval(async () => {
         if (popup && popup.closed) {
           clearInterval(interval);
-
-          // Step 3: After Duo Authentication, check if Duo verification is successful
-          const duoCode = new URLSearchParams(window.location.search).get("duo_code");
-          const duoState = new URLSearchParams(window.location.search).get("state");
-
-          if (duoCode && duoState) {
-            try {
-              // Step 4: Verify Duo authentication with backend
-              const verifyDuoResponse = await fetch(`${API_URL}/api/auth/duo/callback?duo_code=${duoCode}&state=${duoState}`, {
-                method: "GET",
-                credentials: "include",
-              });
-              const verifyDuoData = await verifyDuoResponse.json();
-
-              if (verifyDuoResponse.ok && verifyDuoData.token) {
-                // Save the token in localStorage and navigate to the login page
-                localStorage.setItem('token', verifyDuoData.token);
-                setMessage("Duo Authentication Successful! Redirecting to login...");
-                setTimeout(() => {
-                  navigate("/curasure/login");
-                }, 1500);
-              } else {
-                alert("Duo verification failed. Please try again.");
-                navigate("/curasure/login");
-              }
-            } catch (err) {
-              console.error('Duo verification error:', err);
-              alert('An error occurred during Duo verification. Please try again.');
-              navigate("/curasure/login");
-            }
-          } else {
-            alert("Missing Duo code or state. Please try again.");
-            navigate("/curasure/login");
-          }
         }
       }, 500);
     } catch (err: any) {
