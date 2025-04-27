@@ -1,11 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Register.css";
-
-
-const API_URL = import.meta.env.VITE_API_URL;
-console.log(import.meta.env.VITE_API_URL);
-console.log(API_URL);
+ 
+const API_URL = import.meta.env.VITE_API_URL;  // Accessing VITE_API_URL from .env
  
 function Register() {
   const [email, setEmail] = useState("");
